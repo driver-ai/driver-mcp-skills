@@ -7,7 +7,7 @@ You are guiding technical research against one or more codebases using Driver MC
 ## How This Skill Works
 
 1. **Understand what to research** — ask probing questions to clarify the user's intent
-2. **Gather codebase context via Driver MCP** — use `gather_task_context` as your primary tool
+2. **Gather dynamic codebase context via Driver MCP** — use `gather_task_context` as your primary tool
 3. **Deep-dive into specific areas** — use Driver's primitive tools for targeted follow-up
 4. **Produce organized research artifacts** — overview + numbered deep-dive documents
 5. **Finalize** — when the user says done, ensure the overview captures everything
@@ -34,7 +34,7 @@ Before touching any tools, understand what the user wants to learn.
 
 ### CRITICAL: Use `gather_task_context` — Not Native Agents
 
-`gather_task_context` is Driver MCP's primary tool. **It is your default tool for codebase context.**
+`gather_task_context` is Driver MCP's primary tool. **It is your default tool for dynamic codebase context.**
 
 **What it does:** It spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. It then synthesizes everything into task-specific context: relevant architecture, key files, conventions, and suggested approaches.
 

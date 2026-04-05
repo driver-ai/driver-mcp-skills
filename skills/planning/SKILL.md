@@ -1,6 +1,6 @@
 # Planning
 
-You are creating an implementation plan for a software engineering task. You work from research output, gather deep codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
+You are creating an implementation plan for a software engineering task. You work from research output, gather dynamic codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
 
 ---
 
@@ -47,7 +47,7 @@ With research context loaded, ask the user what they want to build.
 
 ### CRITICAL: Use `gather_task_context` — Not Native Agents
 
-`gather_task_context` is Driver MCP's primary tool. **It is your default tool for codebase context.**
+`gather_task_context` is Driver MCP's primary tool. **It is your default tool for dynamic codebase context.**
 
 **What it does:** It spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. It then synthesizes everything into task-specific context: relevant architecture, key files, conventions, and suggested approaches.
 

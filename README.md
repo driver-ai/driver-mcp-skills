@@ -26,7 +26,7 @@ gather_task_context          ← PRIMARY: start here, always
 
 ### `gather_task_context` — The Primary Tool
 
-This is the single most important tool in Driver MCP. It should be your agent's default for any codebase context need.
+This is the single most important tool in Driver MCP. It should be your agent's default for any dynamic codebase context need.
 
 **What it actually does:** It spawns a specialized context agent on Driver's servers. This agent reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, symbol-level file documentation, development changelogs — and performs live runtime analysis. It then synthesizes everything into task-specific context tailored to your description.
 
