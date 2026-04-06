@@ -1,6 +1,6 @@
 # Planning
 
-You are creating an implementation plan for a software engineering task. You work from research output, gather dynamic codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
+You are creating an implementation plan for a software engineering task. You work from research output, gather codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
 
 ---
 
@@ -47,9 +47,9 @@ With research context loaded, ask the user what they want to build.
 
 ### CRITICAL: Use `gather_task_context` — Not Native Agents
 
-`gather_task_context` is Driver MCP's primary tool. **It is your default tool for dynamic codebase context.**
+`gather_task_context` is Driver MCP's primary tool. **It is your default tool for codebase context.**
 
-**What it does:** It spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. It then synthesizes everything into task-specific context: relevant architecture, key files, conventions, and suggested approaches.
+**What it does:** It spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. It then synthesizes everything into task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches.
 
 **How to call it for planning:** Provide a task description focused on what you're about to plan. Include architectural concerns and testing patterns.
 
@@ -61,11 +61,11 @@ error handling patterns, queue configuration, existing retry mechanisms
 elsewhere in the codebase, and testing patterns/frameworks used."
 ```
 
-**It takes 1-3 minutes. This is expected and normal.** The tool is doing work that would take you just as long or longer to do iteratively with native tools — and it produces higher-quality context because it works from pre-computed, exhaustive documentation rather than raw source files. Wait for the full response.
+**It takes 1-3 minutes. This is expected and normal.** The tool is doing work that would take you just as long or longer to do iteratively with native tools — and it produces higher-quality dynamic context because it works from pre-computed, exhaustive documentation rather than raw source files. Wait for the full response.
 
 ### CRITICAL: Do NOT Substitute Native Agents
 
-**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for `gather_task_context`.** These native tools work from raw source only. `gather_task_context` has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — context that native tools cannot replicate.
+**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for `gather_task_context`.** These native tools work from raw source only. `gather_task_context` has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — dynamic context that native tools cannot replicate.
 
 ---
 

@@ -8,7 +8,7 @@ Driver MCP provides dynamic codebase context through a hierarchy of tools. Use t
 
 ### Primary Tool: `gather_task_context`
 
-Your default tool for dynamic codebase context. Call it with a detailed task description and codebase names.
+Your default tool for codebase context. Call it with a detailed task description and codebase names.
 
 - It spawns a specialized context agent server-side that reads pre-computed, exhaustive documentation and does live analysis
 - **It takes 1-3 minutes. This is expected.** Wait for the full response — it is doing work that would take you longer to do iteratively with native tools
