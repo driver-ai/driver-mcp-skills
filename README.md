@@ -259,4 +259,4 @@ A skill for creating implementation plans from research output. Demonstrates:
 ## Also See
 
 - **CLAUDE.md** in this repo — a working example of Driver MCP integration in a project-level config
-- **[Driver Documentation](https://driverai.com)** — full Driver MCP documentation
+- **[Driver Documentation](https://driver.ai/docs)** — full Driver MCP documentation
