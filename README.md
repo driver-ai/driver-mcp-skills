@@ -142,9 +142,9 @@ codebase exploration.
 
 ---
 
-## How to Audit Existing Skills
+## How to Audit Your Harness Engineering Approach
 
-If you have skills that were written before Driver MCP, or that don't use it effectively, here's how to find and fix the problems.
+If you're using a third-party harness (like Superpowers, gstack, etc.), have skills that were written before Driver MCP, or are using a combination of techniques for harness engineering, here's how to find and fix issues.
 
 ### Audit Checklist
 
