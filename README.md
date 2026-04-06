@@ -4,9 +4,9 @@ Exemplar skills and guidance for getting the most out of [Driver MCP](https://dr
 
 ## Quick Start
 
-1. **Try a skill** — copy `skills/research/` or `skills/planning/` into your project's `.claude/skills/` directory (or equivalent for your rig)
-2. **Read the CLAUDE.md** — see how a project-level CLAUDE.md integrates Driver MCP
-3. **Audit your own skills** — use the [audit checklist](#how-to-audit-existing-skills) below
+1. **Audit your own harness engineering approach** — use the [audit checklist](#how-to-audit-existing-skills) below
+2. **Read the CLAUDE.md** — see how a project-level CLAUDE.md (or AGENTS.md) integrates Driver MCP
+3. **(Optional) Try a skill** — copy `skills/research/` or `skills/planning/` into your project's `.claude/skills/` directory (or equivalent for your rig)
 
 ---
 
