@@ -1,6 +1,6 @@
 # Planning
 
-You are creating an implementation plan for a software engineering task. You work from research output, gather codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
+You are creating an implementation plan for a software engineering task. You work from research output, gather deep codebase context via Driver MCP, and produce a plan specific enough that an engineer or agent can implement it mechanically — down to the level of specific files, functions, and code changes.
 
 ---
 
