@@ -36,9 +36,9 @@ Before touching any tools, understand what the user wants to learn.
 
 Driver MCP's request/poll pair is your primary workflow. **It is your default for codebase context.**
 
-**What the workflow does:** `request_task_context` spawns a specialized context agent on Driver's servers that analyzes the codebase and synthesizes task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches. `poll_task_context` retrieves its status and, when complete, that synthesized context.
+**What the workflow does:** `request_task_context` spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. `poll_task_context` retrieves its status and, when complete, the synthesized task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches.
 
-**How to use it:** Call `request_task_context` with a detailed task description and verified codebase names. It immediately returns a `request_id`; it does not return the context directly. Save that ID and pass it to `poll_task_context` until the request finishes. The richer your description, the better the context you get back.
+**How to use it:** Call `request_task_context` with a detailed task description and verified codebase names. It immediately returns a `request_id`; it does not return the context directly. Save that ID and pass it to `poll_task_context` until the request finishes or reaches the stall threshold below. The richer your description, the better the context you get back.
 
 ```
 Example task description:
@@ -47,11 +47,11 @@ Need to understand: retry logic, failure modes, queue architecture,
 and how delivery status is tracked. Codebase: my-backend"
 ```
 
-**The context agent takes 1-3 minutes. This is expected and normal.** First poll after roughly 30-45 seconds, then every 20-30 seconds. A `QUEUED` or `RUNNING` status means it is still working; keep doing useful work and poll again. A `COMPLETED` status includes the synthesized context. If the status is `FAILED` or `CANCELLED`, report the returned error instead of polling indefinitely.
+**The context agent takes on the order of several minutes. This is expected and normal.** First poll after roughly 30-45 seconds, then every 20-30 seconds. A `QUEUED` or `RUNNING` status means it is still working; keep doing useful work and poll again. A `COMPLETED` status includes the synthesized context. If the status is `FAILED` or `CANCELLED`, report the returned error instead of polling indefinitely. If it is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit rather than polling forever.
 
 ### CRITICAL: Do NOT Substitute Native Agents
 
-**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for the request/poll workflow.** Driver's context agent provides synthesized, task-specific analysis that these approaches cannot replicate.
+**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for the request/poll workflow.** These native tools work from raw source only. Driver's context agent has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — dynamic context that native tools cannot replicate.
 
 Native tools are useful for **targeted follow-up** after `poll_task_context` returns completed context (see Step 3), but they are not a replacement for it.
 
@@ -69,7 +69,7 @@ When you have multiple distinct research angles, call `request_task_context` onc
 
 Keep a mapping from each research angle to its returned `request_id`. Do other useful work while the requests run, then call `poll_task_context` for each outstanding ID in turn. Collect every `COMPLETED` result before synthesizing the findings.
 
-**Example:** You've identified three research angles — authentication flow, session storage, and token rotation. Submit three focused requests, retain all three request IDs, and poll each until it reaches a terminal status. Then synthesize the completed results.
+**Example:** You've identified three research angles — authentication flow, session storage, and token rotation. Submit three focused requests, retain all three request IDs, and poll each until it reaches a terminal status or the stall threshold. Then synthesize the completed results.
 
 ---
 
@@ -159,8 +159,9 @@ When the user indicates research is complete:
 
 **Do NOT:**
 - Use native Explore agents or subagents as a substitute for `request_task_context` + `poll_task_context`
-- Abandon a context request while it is `QUEUED` or `RUNNING` — 1-3 minutes is expected
-- Fall back to other tools because the context request "seems slow"
+- Abandon a context request while it is `QUEUED` or `RUNNING` within the expected several-minute window
+- Keep polling a request that is still pending well past roughly 10 minutes instead of reporting it as stalled and resubmitting
+- Fall back to `get_architecture_overview` or other tools because the context request "seems slow"
 - Use generic language like "gather context from the codebase" — always name the specific Driver MCP tool
 - Skip the conversational Q&A phase — understanding intent before researching prevents wasted work
 - Split documents based on length rather than concept boundaries
@@ -168,7 +169,7 @@ When the user indicates research is complete:
 
 **DO:**
 - Call `request_task_context` with detailed, specific task descriptions and retain each returned `request_id`
-- Poll with `poll_task_context` on the recommended cadence until every request reaches a terminal status
+- Poll with `poll_task_context` on the recommended cadence until every request reaches a terminal status or the stall threshold
 - Use primitive tools (`get_code_map`, `get_file_documentation`, `get_source_file`) for targeted follow-up
 - Submit multiple independent context requests directly when research angles can run in parallel
 - Ask lots of probing questions before and during research

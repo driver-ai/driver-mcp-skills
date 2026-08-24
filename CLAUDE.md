@@ -12,7 +12,7 @@ Your default workflow for codebase context:
 
 - Call `request_task_context` with a detailed task description and codebase names. It spawns a specialized context agent server-side and immediately returns a `request_id`.
 - Call `poll_task_context` with that `request_id` to check progress and retrieve the result. A `QUEUED` or `RUNNING` status means the request is still working; `COMPLETED` includes the synthesized context; `FAILED` or `CANCELLED` includes an error.
-- **The context agent takes 1-3 minutes. This is expected.** First poll after roughly 30-45 seconds, then every 20-30 seconds until it reaches a terminal status. Do useful work between polls.
+- **The context agent takes on the order of several minutes. This is expected.** First poll after roughly 30-45 seconds, then every 20-30 seconds until it reaches a terminal status or the stall threshold. Do useful work between polls. If it is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit rather than polling forever.
 - Do NOT use native Explore agents, subagents, or manual file-reading as a substitute — they work from raw source only and produce inferior context
 - Use `get_codebase_names` to verify exact codebase names before requesting context
 
@@ -23,6 +23,14 @@ After `poll_task_context` returns the completed broad context, drill into specif
 - **`get_code_map`** — navigate codebase directory structure
 - **`get_file_documentation`** — symbol-level docs for a specific file (signatures, types, classes)
 - **`get_source_file`** — read actual source code with line numbers
+
+### Deep Context Documents (for codebase-wide orientation)
+
+The request/poll workflow is your primary, token-efficient path to broad codebase-wide understanding. When you need the full, unabridged source documents, these exhaustive pre-computed documents are also available directly:
+
+- **`get_architecture_overview`** — complete architecture document for a codebase
+- **`get_llm_onboarding_guide`** — codebase orientation, navigation tips, and conventions
+- **`get_changelog`** / **`get_detailed_changelog`** — development history by year/month
 
 ### Parallel Requests
 

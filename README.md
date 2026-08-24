@@ -22,6 +22,8 @@ request_task_context         ← PRIMARY: dispatch task-specific analysis
     ▼
 poll_task_context            ← Poll until COMPLETED, then retrieve context
     │
+    ├── Deep Context Docs    ← Full pre-computed documents (architecture, onboarding, changelog)
+    │
     └── Primitive Tools      ← Targeted follow-up (code map, file docs, source files)
 ```
 
@@ -31,11 +33,11 @@ This request/poll pair is the primary workflow in Driver MCP. It should be your 
 
 > **Migrating from an earlier version?** The synchronous `gather_task_context` tool is deprecated. Replace each call with `request_task_context`, retain its `request_id`, and use `poll_task_context` to retrieve the result.
 
-**What it actually does:** `request_task_context` spawns a specialized context agent on Driver's servers and returns a `request_id` immediately. This agent analyzes the codebase and synthesizes task-specific context tailored to your description. `poll_task_context` checks the request's status and returns that context once complete.
+**What it actually does:** `request_task_context` spawns a specialized context agent on Driver's servers and returns a `request_id` immediately. This agent reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, symbol-level file documentation, development changelogs — and performs live runtime analysis. It then synthesizes everything into task-specific context tailored to your description. `poll_task_context` checks the request's status and returns that context once complete.
 
 This is not a docs lookup. It's a server-side agent doing sophisticated codebase analysis.
 
-**How to use it:** Provide a detailed task description and codebase names to `request_task_context`. Retain the returned `request_id`, then pass it to `poll_task_context` until the request reaches a terminal status. The richer your description, the better the context.
+**How to use it:** Provide a detailed task description and codebase names to `request_task_context`. Retain the returned `request_id`, then pass it to `poll_task_context` until the request reaches a terminal status or the stall threshold described below. The richer your description, the better the context.
 
 ```
 Good: "Researching how the notification system handles delivery retries.
@@ -47,11 +49,11 @@ Bad:  "Tell me about notifications"
 
 **Use `get_codebase_names` first** to verify exact codebase names. Invalid names can fail or misdirect a context request.
 
-### Asynchronous Execution: 1-3 Minutes
+### Asynchronous Execution: Several Minutes
 
-The context agent typically takes 1-3+ minutes to finish. **This is expected and normal.** `request_task_context` returns immediately; the work continues server-side.
+The context agent takes on the order of several minutes to finish. **This is expected and normal.** `request_task_context` returns immediately; the work continues server-side.
 
-The context agent is doing significant work that your agent would otherwise have to do on its own through many iterations of file reading, searching, and synthesis — consuming far more tokens and taking just as long or longer.
+The context agent is doing significant work that your agent would otherwise have to do on its own through many iterations of file reading, searching, and synthesis — consuming far more tokens and taking just as long or longer. It produces much higher-quality context because it leverages pre-computed, exhaustive guiding documentation that native tools don't have access to.
 
 Think of it as compressed expert-level codebase analysis. The wait is not wasted — it's the most efficient path to task-specific context.
 
@@ -60,6 +62,18 @@ Call `poll_task_context` for the first time after roughly 30-45 seconds, then ev
 - **`QUEUED` / `RUNNING`** — the agent is still working; do useful work and poll again
 - **`COMPLETED`** — consume the returned synthesized context
 - **`FAILED` / `CANCELLED`** — report the returned error; do not keep polling
+
+If a request is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit the request rather than polling forever.
+
+### Deep Context Documents
+
+For cases where you want the full, unabridged codebase-wide documents, these are available directly:
+
+- **`get_architecture_overview`** — complete architecture document
+- **`get_llm_onboarding_guide`** — codebase orientation, navigation, conventions
+- **`get_changelog`** / **`get_detailed_changelog`** — development history
+
+These are large documents. The task-context agent reads them server-side and returns only what's relevant. Use these directly only when you need the complete source document.
 
 ### Primitive Tools
 
@@ -90,7 +104,7 @@ The single most impactful thing you can do. Don't say "use Driver" — name the 
 
 ✅ "Call `request_task_context` (Driver MCP) with a detailed task description
    and codebase names, then call `poll_task_context` with the returned
-   `request_id` until the context is complete"
+   `request_id` until the context is complete or the request is stalled"
 ```
 
 When a skill says "use Driver" generically, models don't know which tool to call. Name both `request_task_context` and `poll_task_context` so the model dispatches the work and retrieves the result.
@@ -103,9 +117,10 @@ Include a brief description in your skill:
 
 ```markdown
 `request_task_context` spawns a specialized context agent on Driver's servers
-and immediately returns a `request_id`. The agent analyzes the codebase and
-synthesizes task-specific context. Call `poll_task_context` with the ID until
-it returns that context.
+and immediately returns a `request_id`. The agent reads pre-computed,
+exhaustive codebase documentation and does live analysis. Call
+`poll_task_context` with the ID until it returns the synthesized context or
+the request is considered stalled.
 ```
 
 ### 3. Explain Polling and Timing
@@ -113,10 +128,11 @@ it returns that context.
 Without explicit framing, models may treat a `QUEUED` or `RUNNING` response as a failure, poll too aggressively, or forget to retrieve the result. Include status handling and timing in your skill:
 
 ```markdown
-The context agent takes 1-3+ minutes. This is expected. First call
+The context agent takes on the order of several minutes. This is expected. First call
 `poll_task_context` after roughly 30-45 seconds, then every 20-30 seconds.
 Continue while status is `QUEUED` or `RUNNING`; consume context on `COMPLETED`;
-report the error on `FAILED` or `CANCELLED`.
+report the error on `FAILED` or `CANCELLED`. If it is still pending well past
+roughly 10 minutes, report it as stalled and resubmit instead of polling forever.
 ```
 
 ### 4. Add Anti-Substitution Language
@@ -126,7 +142,8 @@ Explicitly tell the model what NOT to do:
 ```markdown
 Do NOT use native Explore agents, subagents, or manual file-reading/grep
 as a substitute for `request_task_context` + `poll_task_context`. Native tools
-do not provide Driver's synthesized, task-specific analysis.
+work from raw source only. Driver has access to pre-computed, exhaustive
+codebase documentation that native tools cannot replicate.
 ```
 
 ### 5. Use Native Async Parallelism
@@ -182,7 +199,8 @@ Call `request_task_context` (Driver MCP) with a detailed task description
 and codebase names. This starts a specialized context agent server-side and
 returns a `request_id` immediately. Call `poll_task_context` with that ID after
 roughly 30-45 seconds, then every 20-30 seconds while status is `QUEUED` or
-`RUNNING`. On `COMPLETED`, use the returned synthesized context.
+`RUNNING`. On `COMPLETED`, use the returned synthesized context. If it remains
+pending well past roughly 10 minutes, report it as stalled and resubmit.
 
 Do NOT use native Explore agents or subagents as a substitute for
 the request/poll workflow. For targeted follow-up, use `get_code_map`,
@@ -209,7 +227,9 @@ These are real failure modes observed in production — not hypotheticals.
 
 **Root cause:** Skills that use generic "subagent" language for codebase exploration. The model sees it has a native Agent tool and defaults to what it knows.
 
-**Fix:** Name the specific tool, explain that it starts a server-side context agent, and add anti-substitution language.
+**Real-world example:** A model explained its choice: *"Driver is for pre-computed documentation. I needed actual source, so I used an Explore agent."* This reasoning is wrong — `request_task_context` spawns a live agent that reads source — but reveals how models categorize Driver when skills don't explain what it does.
+
+**Fix:** Name the specific tool, explain what it does (server-side agent, not docs lookup), and add anti-substitution language.
 
 ### 3. Incomplete or Impatient Polling
 
@@ -219,7 +239,7 @@ These are real failure modes observed in production — not hypotheticals.
 
 **Failure mode:** A model sees that the request returned no context, assumes the result is empty, and falls back to a simpler tool instead of using the returned `request_id` to poll.
 
-**Fix:** State that `request_task_context` returns only a request ID, specify the first and subsequent poll timing, define all statuses, and require polling every request to a terminal status.
+**Fix:** State that `request_task_context` returns only a request ID, specify the first and subsequent poll timing, and define all statuses. Poll each request to a terminal status, but treat requests still pending well past roughly 10 minutes as stalled and resubmit them rather than polling forever.
 
 ---
 

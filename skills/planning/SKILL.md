@@ -49,9 +49,9 @@ With research context loaded, ask the user what they want to build.
 
 Driver MCP's request/poll pair is your primary workflow. **It is your default for codebase context.**
 
-**What the workflow does:** `request_task_context` spawns a specialized context agent on Driver's servers that analyzes the codebase and synthesizes task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches. `poll_task_context` retrieves its status and, when complete, that synthesized context.
+**What the workflow does:** `request_task_context` spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. `poll_task_context` retrieves its status and, when complete, the synthesized task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches.
 
-**How to use it for planning:** Call `request_task_context` with a task description focused on what you're about to plan, including architectural concerns and testing patterns. It immediately returns a `request_id`; save that ID and pass it to `poll_task_context` until the request finishes.
+**How to use it for planning:** Call `request_task_context` with a task description focused on what you're about to plan, including architectural concerns and testing patterns. It immediately returns a `request_id`; save that ID and pass it to `poll_task_context` until the request finishes or reaches the stall threshold below.
 
 ```
 Example task description:
@@ -61,11 +61,11 @@ error handling patterns, queue configuration, existing retry mechanisms
 elsewhere in the codebase, and testing patterns/frameworks used."
 ```
 
-**The context agent takes 1-3 minutes. This is expected and normal.** First poll after roughly 30-45 seconds, then every 20-30 seconds. A `QUEUED` or `RUNNING` status means it is still working; keep doing useful work and poll again. A `COMPLETED` status includes the synthesized context. If the status is `FAILED` or `CANCELLED`, report the returned error instead of polling indefinitely.
+**The context agent takes on the order of several minutes. This is expected and normal.** First poll after roughly 30-45 seconds, then every 20-30 seconds. A `QUEUED` or `RUNNING` status means it is still working; keep doing useful work and poll again. A `COMPLETED` status includes the synthesized context. If the status is `FAILED` or `CANCELLED`, report the returned error instead of polling indefinitely. If it is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit rather than polling forever.
 
 ### CRITICAL: Do NOT Substitute Native Agents
 
-**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for the request/poll workflow.** Driver's context agent provides synthesized, task-specific analysis that these approaches cannot replicate.
+**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for the request/poll workflow.** These native tools work from raw source only. Driver's context agent has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — dynamic context that native tools cannot replicate.
 
 ---
 
@@ -245,8 +245,9 @@ Present the plan to the user for review.
 
 **Do NOT:**
 - Use native Explore agents or subagents as a substitute for `request_task_context` + `poll_task_context`
-- Abandon a context request while it is `QUEUED` or `RUNNING` — 1-3 minutes is expected
-- Fall back to other tools because the context request "seems slow"
+- Abandon a context request while it is `QUEUED` or `RUNNING` within the expected several-minute window
+- Keep polling a request that is still pending well past roughly 10 minutes instead of reporting it as stalled and resubmitting
+- Fall back to `get_architecture_overview` or other tools because the context request "seems slow"
 - Write plan content only in chat — always write to files
 - Skip reading research output before planning
 - Write vague task descriptions ("implement the feature")
@@ -256,7 +257,7 @@ Present the plan to the user for review.
 
 **DO:**
 - Call `request_task_context` with detailed, planning-focused task descriptions and retain each returned `request_id`
-- Poll with `poll_task_context` on the recommended cadence until the request reaches a terminal status
+- Poll with `poll_task_context` on the recommended cadence until the request reaches a terminal status or the stall threshold
 - Use primitive tools (`get_code_map`, `get_file_documentation`, `get_source_file`) to reach code-level specificity
 - Write tasks specific enough that an engineer can implement without ambiguity
 - Order tests before implementation (TDD)
