@@ -8,7 +8,7 @@ You are creating an implementation plan for a software engineering task. You wor
 
 1. **Ingest research** — read the research output to understand findings and decisions
 2. **Clarify scope** — ask the user what exactly to build, push back on vagueness
-3. **Gather broad codebase context** — use `gather_task_context` for architecture and conventions
+3. **Gather broad codebase context** — use `request_task_context` + `poll_task_context` for architecture and conventions
 4. **Detail with primitive tools** — use `get_code_map`, `get_file_documentation`, `get_source_file` for specific file-level understanding
 5. **Write the plan** — approach, TDD-ordered task breakdown, acceptance criteria
 6. **Self-review** — validate the plan against the actual codebase using Driver tools
@@ -45,13 +45,13 @@ With research context loaded, ask the user what they want to build.
 
 ## Step 3: Gather Broad Codebase Context
 
-### CRITICAL: Use `gather_task_context` — Not Native Agents
+### CRITICAL: Use `request_task_context` + `poll_task_context` — Not Native Agents
 
-`gather_task_context` is Driver MCP's primary tool. **It is your default tool for codebase context.**
+Driver MCP's request/poll pair is your primary workflow. **It is your default for codebase context.**
 
-**What it does:** It spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. It then synthesizes everything into task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches.
+**What the workflow does:** `request_task_context` spawns a specialized context agent on Driver's servers that reads pre-computed, exhaustive codebase documentation — architecture overviews, code maps, file-level documentation, changelogs — and does live runtime analysis. `poll_task_context` retrieves its status and, when complete, the synthesized task-specific dynamic context: relevant architecture, key files, conventions, and suggested approaches.
 
-**How to call it for planning:** Provide a task description focused on what you're about to plan. Include architectural concerns and testing patterns.
+**How to use it for planning:** Call `request_task_context` with a task description focused on what you're about to plan, including architectural concerns and testing patterns. It immediately returns a `request_id`; save that ID and pass it to `poll_task_context` until the request finishes or reaches the stall threshold below.
 
 ```
 Example task description:
@@ -61,17 +61,17 @@ error handling patterns, queue configuration, existing retry mechanisms
 elsewhere in the codebase, and testing patterns/frameworks used."
 ```
 
-**It takes 1-3 minutes. This is expected and normal.** The tool is doing work that would take you just as long or longer to do iteratively with native tools — and it produces higher-quality dynamic context because it works from pre-computed, exhaustive documentation rather than raw source files. Wait for the full response.
+**The context agent takes on the order of several minutes. This is expected and normal.** First poll after roughly 30-45 seconds, then every 20-30 seconds. A `QUEUED` or `RUNNING` status means it is still working; keep doing useful work and poll again. A `COMPLETED` status includes the synthesized context. If the status is `FAILED` or `CANCELLED`, report the returned error instead of polling indefinitely. If it is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit rather than polling forever.
 
 ### CRITICAL: Do NOT Substitute Native Agents
 
-**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for `gather_task_context`.** These native tools work from raw source only. `gather_task_context` has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — dynamic context that native tools cannot replicate.
+**Do NOT use native Explore agents, subagents, or manual file-reading/grep as a substitute for the request/poll workflow.** These native tools work from raw source only. Driver's context agent has access to pre-computed documentation that covers architecture, symbol-level details, development history, and conventions — dynamic context that native tools cannot replicate.
 
 ---
 
 ## Step 4: Detail with Primitive Driver MCP Tools
 
-After `gather_task_context` gives you the broad picture, drill into specifics using Driver's primitive tools. **This step is essential for reaching code-level plan specificity.**
+After `poll_task_context` returns the completed broad context, drill into specifics using Driver's primitive tools. **This step is essential for reaching code-level plan specificity.**
 
 ### `get_code_map`
 Navigate codebase structure. Use this to:
@@ -91,7 +91,7 @@ Read the actual source code. Use this to:
 - Understand control flow, error handling patterns, and edge cases
 - Get the precise code context needed to write accurate task specifications
 
-**The progression is: `gather_task_context` (broad) → `get_code_map` (navigate) → `get_file_documentation` (interfaces) → `get_source_file` (implementation).** You won't always need all four, but the plan should be specific enough that you've used at least the first three.
+**The progression is: `request_task_context` (dispatch broad analysis) → `poll_task_context` (retrieve it) → `get_code_map` (navigate) → `get_file_documentation` (interfaces) → `get_source_file` (implementation).** You won't always need every primitive, but the plan should be specific enough that you've used at least the request/poll pair, `get_code_map`, and `get_file_documentation`.
 
 ---
 
@@ -204,7 +204,7 @@ Be specific. Generic advice is not a constraint.
 After drafting the plan, validate it against the actual codebase. **This step is required, not optional.**
 
 ### Big-Picture Check
-Call `gather_task_context` with a task description focused on validating the plan:
+Call `request_task_context` with a task description focused on validating the plan, then retain the returned `request_id` and use `poll_task_context` to retrieve the completed review:
 
 ```
 Example:
@@ -244,9 +244,10 @@ Present the plan to the user for review.
 ## Anti-Patterns
 
 **Do NOT:**
-- Use native Explore agents or subagents as a substitute for `gather_task_context`
-- Abandon `gather_task_context` if it takes 1-3 minutes — this is expected behavior
-- Fall back to `get_architecture_overview` or other tools because `gather_task_context` "seems slow"
+- Use native Explore agents or subagents as a substitute for `request_task_context` + `poll_task_context`
+- Abandon a context request while it is `QUEUED` or `RUNNING` within the expected several-minute window
+- Keep polling a request that is still pending well past roughly 10 minutes instead of reporting it as stalled and resubmitting
+- Fall back to `get_architecture_overview` or other tools because the context request "seems slow"
 - Write plan content only in chat — always write to files
 - Skip reading research output before planning
 - Write vague task descriptions ("implement the feature")
@@ -255,8 +256,8 @@ Present the plan to the user for review.
 - Suggest moving to implementation — the user controls phase transitions
 
 **DO:**
-- Call `gather_task_context` with detailed, planning-focused task descriptions
-- Wait for the full response — it is doing compressed expert-level codebase analysis
+- Call `request_task_context` with detailed, planning-focused task descriptions and retain each returned `request_id`
+- Poll with `poll_task_context` on the recommended cadence until the request reaches a terminal status or the stall threshold
 - Use primitive tools (`get_code_map`, `get_file_documentation`, `get_source_file`) to reach code-level specificity
 - Write tasks specific enough that an engineer can implement without ambiguity
 - Order tests before implementation (TDD)

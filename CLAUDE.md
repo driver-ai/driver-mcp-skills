@@ -6,18 +6,19 @@ Exemplar skills and guidance for integrating [Driver MCP](https://driverai.com) 
 
 Driver MCP provides dynamic codebase context through a hierarchy of tools. Use them correctly:
 
-### Primary Tool: `gather_task_context`
+### Primary Workflow: `request_task_context` + `poll_task_context`
 
-Your default tool for codebase context. Call it with a detailed task description and codebase names.
+Your default workflow for codebase context:
 
-- It spawns a specialized context agent server-side that reads pre-computed, exhaustive documentation and does live analysis
-- **It takes 1-3 minutes. This is expected.** Wait for the full response — it is doing work that would take you longer to do iteratively with native tools
+- Call `request_task_context` with a detailed task description and codebase names. It spawns a specialized context agent server-side and immediately returns a `request_id`.
+- Call `poll_task_context` with that `request_id` to check progress and retrieve the result. A `QUEUED` or `RUNNING` status means the request is still working; `COMPLETED` includes the synthesized context; `FAILED` or `CANCELLED` includes an error.
+- **The context agent takes on the order of several minutes. This is expected.** First poll after roughly 30-45 seconds, then every 20-30 seconds until it reaches a terminal status or the stall threshold. Do useful work between polls. If it is still pending well past roughly 10 minutes, treat it as stalled: report it and resubmit rather than polling forever.
 - Do NOT use native Explore agents, subagents, or manual file-reading as a substitute — they work from raw source only and produce inferior context
-- Use `get_codebase_names` to verify exact codebase names before calling
+- Use `get_codebase_names` to verify exact codebase names before requesting context
 
 ### Primitive Tools (for targeted follow-up)
 
-After `gather_task_context` returns broad context, drill into specifics:
+After `poll_task_context` returns the completed broad context, drill into specifics:
 
 - **`get_code_map`** — navigate codebase directory structure
 - **`get_file_documentation`** — symbol-level docs for a specific file (signatures, types, classes)
@@ -25,15 +26,15 @@ After `gather_task_context` returns broad context, drill into specifics:
 
 ### Deep Context Documents (for codebase-wide orientation)
 
-`gather_task_context` is your primary, token-efficient tool for broad codebase-wide understanding. When you need the full, unabridged source documents, these exhaustive pre-computed documents are also available directly:
+The request/poll workflow is your primary, token-efficient path to broad codebase-wide understanding. When you need the full, unabridged source documents, these exhaustive pre-computed documents are also available directly:
 
 - **`get_architecture_overview`** — complete architecture document for a codebase
 - **`get_llm_onboarding_guide`** — codebase orientation, navigation tips, and conventions
 - **`get_changelog`** / **`get_detailed_changelog`** — development history by year/month
 
-### Parallel Calls
+### Parallel Requests
 
-To run multiple `gather_task_context` calls concurrently, spawn native subagents whose **only job** is to make the Driver MCP call and return the result. The subagent is a concurrency wrapper — it does NOT do its own codebase exploration.
+For multiple distinct questions, call `request_task_context` once per question without waiting for earlier requests to complete. Driver runs independent requests concurrently; no subagent wrapper is needed. Keep each returned `request_id`, then poll every outstanding request in turn and collect completed results.
 
 ## Available Skills
 
